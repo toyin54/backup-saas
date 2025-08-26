@@ -1,0 +1,24 @@
+{
+  "name": "backup-saas",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "dev:api": "nodemon api/src/index.ts",
+    "dev:worker": "nodemon worker/src/index.ts",
+    "build": "tsc -p tsconfig.json && tsc -p api/tsconfig.json && tsc -p worker/tsconfig.json"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "devDependencies": {
+    "nodemon": "^3.1.10",
+    "prisma": "^6.14.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.2"
+  },
+  "dependencies": {
+    "@azure/storage-blob": "^12.28.0",
+    "@prisma/client": "^6.14.0"
+  }
+}

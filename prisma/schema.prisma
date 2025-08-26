@@ -1,0 +1,159 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum SourceType {
+MONGO
+POSTGRES
+MYSQL
+FILES
+}
+
+
+enum DestinationType {
+AZURE_BLOB
+S3
+GDRIVE
+DROPBOX
+}
+
+
+enum RunStatus {
+QUEUED
+RUNNING
+SUCCESS
+FAILED
+}
+
+
+
+model User {
+id String @id @default(uuid())
+email String @unique
+passwordHash String?
+externalAuthId String? @unique
+createdAt DateTime @default(now())
+updatedAt DateTime @updatedAt
+plan String @default("FREE")
+stripeCustomerId String?
+projects Project[]
+apiKeys ApiKey[]
+}
+
+
+model ApiKey {
+id String @id @default(uuid())
+userId String
+user User @relation(fields: [userId], references: [id])
+name String
+keyHash String // hash of the API key (never store raw)
+createdAt DateTime @default(now())
+lastUsedAt DateTime?
+
+
+@@index([userId])
+}
+
+
+model Project {
+id String @id @default(uuid())
+userId String
+user User @relation(fields: [userId], references: [id])
+name String
+createdAt DateTime @default(now())
+updatedAt DateTime @updatedAt
+sources Source[]
+destinations Destination[]
+jobs Job[]
+
+
+@@index([userId])
+}
+model Source {
+  id        String     @id @default(uuid())
+  projectId String
+  project   Project    @relation(fields: [projectId], references: [id])
+  type      SourceType
+  // Encrypted JSON (envelope encryption); do not store plaintext secrets
+  configEnc String
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  jobs Job[]
+
+  @@index([projectId])
+}
+
+model Destination {
+  id        String          @id @default(uuid())
+  projectId String
+  project   Project         @relation(fields: [projectId], references: [id])
+  type      DestinationType
+  // Encrypted JSON with bucket/container/path/region/etc.
+  configEnc String
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+
+  jobs Job[]
+
+  @@index([projectId])
+}
+
+model Job {
+  id            String      @id @default(uuid())
+  projectId     String
+  project       Project     @relation(fields: [projectId], references: [id])
+  sourceId      String
+  source        Source      @relation(fields: [sourceId], references: [id])
+  destinationId String
+  destination   Destination @relation(fields: [destinationId], references: [id])
+
+  scheduleCron  String // e.g. "0 2 * * *"
+  retentionDays Int     @default(30)
+  compression   String  @default("gzip") // "gzip" | "zstd"
+  encryption    String  @default("none") // "none" | "AES256" | "KMS"
+  keyRef        String? // reference to Key Vault/ KMS key
+  prefix        String  @default("")
+  enabled       Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  runs Run[]
+
+  @@index([projectId])
+  @@index([sourceId])
+  @@index([destinationId])
+}
+
+model Run {
+  id           String    @id @default(uuid())
+  jobId        String
+  job          Job       @relation(fields: [jobId], references: [id])
+  status       RunStatus @default(QUEUED)
+  attempts     Int       @default(0)
+  startedAt    DateTime?
+  finishedAt   DateTime?
+  bytesWritten BigInt    @default(0)
+  durationMs   Int? // convenience metric
+  logExcerpt   String? // last N lines or key messages
+  artifactUrl  String? // signed URL or path
+  retryOf      String?
+
+  createdAt DateTime @default(now())
+
+  @@index([jobId])
+  @@index([status])
+}
