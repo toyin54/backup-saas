@@ -48,9 +48,9 @@ export function shellQuote(s: string) {
 }
 
 // ---------- Helpers ----------
-export function tmpPath(ext: string) {
+export function tmpPath(dumptype : string , ext = 'bk') : string {
   const id = randomBytes(8).toString("hex");
-  return pathResolve(tmpdir(), `sqldump-${id}${ext}`);
+  return pathResolve(tmpdir(), `${dumptype}-${id}${ext}`);
 }
 
 export function gzipArgs(level?: number) {

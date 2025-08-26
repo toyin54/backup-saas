@@ -84,9 +84,16 @@ export async function dumpSQL(cfg: sqlParam) : Promise<string> {
   const outputStream = createWriteStream(out);
 
   proc.stdout!.pipe(outputStream);
-
-   await done;
-  await new Promise<void>((res) => outputStream.on("finish", () => res()));
+  try {
+    await done;
+    await new Promise<void>((res, rej) => {
+      outputStream.on("error", rej);
+      outputStream.on("finish", () => res());
+    });
+  } catch (e) {
+    try { if (await fileExists(out)) await fs.unlink(out); } catch {}
+    throw e;
+  }
   return out;
 }
 
