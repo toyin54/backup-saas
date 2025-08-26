@@ -1,16 +1,17 @@
+import { exec as _exec } from "node:child_process";
 import { promisify } from "node:util";
-import { tmpdir } from "node:os";
-import { randomBytes } from "node:crypto";
-import { resolve as pathResolve } from "node:path";
-import { createWriteStream, promises as fs } from "node:fs";
-import { spawn } from "node:child_process";
+const exec = promisify(_exec);
 
-export async function dumpMongo(cfg: {
+
+
+export type MongoConfig = {
   uri: string;
   db?: string;
   collections?: string[];
   compression?: "gzip" | "zstd";
-}) {
+
+}
+export async function dumpMongo(cfg: MongoConfig) : Promise<string> {
   const ts = Date.now();
   const out = `/tmp/mongo-${ts}.archive`; // we’ll pipe to gzip below
   // Build command
